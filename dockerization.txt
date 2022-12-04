@@ -1,0 +1,22 @@
+# Dockerfile contents
+FROM python:3.9
+
+COPY . /app
+WORKDIR /app
+
+RUN pip install -r requirements.txt
+
+ENTRYPOINT ["python"]
+CMD ["generator.py"]
+
+
+# Build an image
+docker build -t kafka_msg_gen:0.0.1 ./app
+
+# Run container
+docker run --rm --name kafka_msg_gen kafka_msg_gen:0.0.1 localhost:9092 test --num=25
+
+docker run --rm --network host  kafka_msg_gen:0.0.1 generator.py 0.0.0.0:9092 test --num=25
+
+
+
