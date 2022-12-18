@@ -7,4 +7,4 @@ RUN pip install -r requirements.txt
 
 EXPOSE 9092
 ENTRYPOINT ["python"]
-CMD ["generator.py"]
+CMD ["generator_dockerized.py"]

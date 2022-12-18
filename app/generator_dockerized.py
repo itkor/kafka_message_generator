@@ -1,9 +1,22 @@
 from faker import Faker
 import time
 import datetime
+import os
 import argparse
 from kafka import KafkaProducer
 from json import dumps
+import signal
+import logging, sys
+
+
+class AppKiller:
+    kill_now = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_app)
+        signal.signal(signal.SIGTERM, self.exit_app)
+
+    def exit_app(self,signum, frame):
+        self.kill_now = True
 
 def generate_message(faker=Faker()):
     '''
@@ -30,49 +43,49 @@ def generate_message(faker=Faker()):
     }
     return gen_dct
 
-def main():
-    '''
-    Receives arguments:
-        address - Kafka address. Default - 'localhost:9092'
-        topic - Kafka topic name. Default - 'test'
-        --num - Number of messages to send. Default - 0. 0 means limitless continuous flow of messages
-    Sends messages in dictionaries into the
-    '''
+if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    killer = AppKiller()
 
     # Parse arguments for data generation
     parser = argparse.ArgumentParser(description='Configure data generator')
-    parser.add_argument('address', type=str, default='localhost:9092', metavar='a', help='Kafka broker address') # will be accesible under args.addr
-    parser.add_argument('topic', type=str, default='sessions', help='Kafka topic name') # will be accesible under args.topic
-    parser.add_argument('--num', type=int, default=0, help='Set number of dicts generated') # will be accesible under args.num
+    parser.add_argument('address', type=str, default='localhost:9092', metavar='a', help='Kafka broker address') # will be accesible under addr
+    parser.add_argument('topic', type=str, default='sessions', help='Kafka topic name') # will be accesible under topic
+    parser.add_argument('--num', type=int, default=0, help='Set number of dicts generated') # will be accesible under num
+
     args = parser.parse_args()
+    address = args.address
+    topic = args.topic
+    num = args.num
 
     # Initialize Faker library for data synthesizing
     faker = Faker()
 
     # Initialize Kafka producer
-    producer = KafkaProducer(bootstrap_servers=[args.address], # localhost:9092
+    producer = KafkaProducer(bootstrap_servers=[address],# localhost:9092
+                            api_version=(0,11,5),
                              value_serializer=lambda x:
                              dumps(x).encode('utf-8'))
     # Message counter
     msg_num = 0
 
-    if args.num > 0:
-        for i in range(args.num):
+    if num > 0:
+        for i in range(num):
             gen_dct = generate_message(faker)
-            time.sleep(0.25)
-            producer.send(args.topic, value=gen_dct)
-            print(f'Sent message #{i}')
-    elif args.num == 0:
+            time.sleep(1)
+            producer.send(topic, value=gen_dct)
+            logging.info(f'Sent message #{i}')
+
+    elif num == 0:
         while True:
+            if killer.kill_now:
+                break
             msg_num += 1
             gen_dct = generate_message(faker)
-            time.sleep(0.25)
-            producer.send(args.topic, value=gen_dct)
-            print(f'Sent message #{msg_num}')
+            time.sleep(1)
+            producer.send(topic, value=gen_dct)
+            logging.info(f'Sent message #{msg_num}')
     else:
         print(f'Incorrect number of messages - should be >= 0. Received instead: {msg_num}')
 
-
-
-if __name__ == "__main__":
-    main()
+    logging.info("\n The process is interrupted.")

@@ -20,4 +20,4 @@ services:
             - KAFKA_ADVERTISED_HOST_NAME=localhost
             - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
         depends_on:
-        - zookeeper
+            - zookeeper
